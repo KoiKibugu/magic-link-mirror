@@ -30,17 +30,34 @@ interface TasksViewProps {
 
 export const TasksView = ({ userDepartment }: TasksViewProps) => {
   const [tasks, setTasks] = useState<any[]>([]);
+  const [departments, setDepartments] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState("medium");
   const [status, setStatus] = useState("todo");
+  const [selectedDepartment, setSelectedDepartment] = useState("");
+  const [assignee, setAssignee] = useState("");
+  const [dueDate, setDueDate] = useState("");
   const { user } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
     fetchTasks();
+    fetchDepartments();
+    fetchUsers();
   }, [userDepartment]);
+
+  const fetchDepartments = async () => {
+    const { data } = await supabase.from("departments").select("*").order("name");
+    if (data) setDepartments(data);
+  };
+
+  const fetchUsers = async () => {
+    const { data } = await supabase.from("profiles").select("id, full_name, email");
+    if (data) setUsers(data);
+  };
 
   const fetchTasks = async () => {
     if (!userDepartment) return;
@@ -58,15 +75,17 @@ export const TasksView = ({ userDepartment }: TasksViewProps) => {
 
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !userDepartment) return;
+    if (!user) return;
 
     const { error } = await supabase.from("tasks").insert({
       title,
       description,
       priority,
       status,
-      department_id: userDepartment.id,
+      department_id: selectedDepartment || userDepartment?.id,
       created_by: user.id,
+      assigned_to: assignee || null,
+      due_date: dueDate || null,
     });
 
     if (error) {
@@ -85,6 +104,9 @@ export const TasksView = ({ userDepartment }: TasksViewProps) => {
       setDescription("");
       setPriority("medium");
       setStatus("todo");
+      setSelectedDepartment("");
+      setAssignee("");
+      setDueDate("");
       fetchTasks();
     }
   };
@@ -160,9 +182,49 @@ export const TasksView = ({ userDepartment }: TasksViewProps) => {
                   <SelectContent>
                     <SelectItem value="todo">To Do</SelectItem>
                     <SelectItem value="in-progress">In Progress</SelectItem>
+                    <SelectItem value="review">Review</SelectItem>
                     <SelectItem value="done">Done</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+              <div>
+                <Label htmlFor="department">Department</Label>
+                <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {departments.map((dept) => (
+                      <SelectItem key={dept.id} value={dept.id}>
+                        {dept.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="assignee">Assignee</Label>
+                <Select value={assignee} onValueChange={setAssignee}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select assignee" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {users.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.full_name || u.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="dueDate">Due Date</Label>
+                <Input
+                  id="dueDate"
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                />
               </div>
               <Button type="submit" className="w-full">
                 Create Task

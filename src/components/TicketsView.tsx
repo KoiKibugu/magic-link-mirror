@@ -30,16 +30,32 @@ interface TicketsViewProps {
 
 export const TicketsView = ({ userDepartment }: TicketsViewProps) => {
   const [tickets, setTickets] = useState<any[]>([]);
+  const [departments, setDepartments] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState("medium");
+  const [selectedDepartment, setSelectedDepartment] = useState("");
+  const [assignedTo, setAssignedTo] = useState("");
   const { user } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
     fetchTickets();
+    fetchDepartments();
+    fetchUsers();
   }, [userDepartment]);
+
+  const fetchDepartments = async () => {
+    const { data } = await supabase.from("departments").select("*").order("name");
+    if (data) setDepartments(data);
+  };
+
+  const fetchUsers = async () => {
+    const { data } = await supabase.from("profiles").select("id, full_name, email");
+    if (data) setUsers(data);
+  };
 
   const fetchTickets = async () => {
     if (!userDepartment) return;
@@ -57,14 +73,15 @@ export const TicketsView = ({ userDepartment }: TicketsViewProps) => {
 
   const handleCreateTicket = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !userDepartment) return;
+    if (!user) return;
 
     const { error } = await supabase.from("tickets").insert({
       title,
       description,
       priority,
-      department_id: userDepartment.id,
+      department_id: selectedDepartment || userDepartment?.id,
       created_by: user.id,
+      assigned_to: assignedTo || null,
     } as any);
 
     if (error) {
@@ -82,6 +99,8 @@ export const TicketsView = ({ userDepartment }: TicketsViewProps) => {
       setTitle("");
       setDescription("");
       setPriority("medium");
+      setSelectedDepartment("");
+      setAssignedTo("");
       fetchTickets();
     }
   };
@@ -148,6 +167,36 @@ export const TicketsView = ({ userDepartment }: TicketsViewProps) => {
                     <SelectItem value="medium">Medium</SelectItem>
                     <SelectItem value="high">High</SelectItem>
                     <SelectItem value="urgent">Urgent</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="department">Department</Label>
+                <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {departments.map((dept) => (
+                      <SelectItem key={dept.id} value={dept.id}>
+                        {dept.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="assignedTo">Assigned To</Label>
+                <Select value={assignedTo} onValueChange={setAssignedTo}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select assignee" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {users.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.full_name || u.email}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
