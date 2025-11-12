@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { FileText, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DocumentTemplateDialog } from "./DocumentTemplateDialog";
 
 interface DocumentsViewProps {
   userDepartment: any;
@@ -47,6 +48,14 @@ export const DocumentsView = ({ userDepartment }: DocumentsViewProps) => {
     "09": [],
   };
 
+  const [selectedDocument, setSelectedDocument] = useState<string | null>(null);
+  const [isTemplateOpen, setIsTemplateOpen] = useState(false);
+
+  const handleDocumentClick = (doc: string) => {
+    setSelectedDocument(doc);
+    setIsTemplateOpen(true);
+  };
+
   const departmentDocs = departmentDocuments[userDepartment?.code] || [];
 
   return (
@@ -68,9 +77,14 @@ export const DocumentsView = ({ userDepartment }: DocumentsViewProps) => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <Button variant="outline" size="sm" className="w-full">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full"
+                  onClick={() => handleDocumentClick(doc)}
+                >
                   <Download className="mr-2 h-4 w-4" />
-                  Download Template
+                  Open Template
                 </Button>
               </CardContent>
             </Card>
@@ -115,6 +129,13 @@ export const DocumentsView = ({ userDepartment }: DocumentsViewProps) => {
           )}
         </div>
       </div>
+
+      <DocumentTemplateDialog
+        isOpen={isTemplateOpen}
+        onClose={() => setIsTemplateOpen(false)}
+        documentType={selectedDocument || ""}
+        departmentCode={userDepartment?.code}
+      />
     </div>
   );
 };
