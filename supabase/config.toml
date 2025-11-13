@@ -1,1 +1,4 @@
 project_id = "gmthpphcsnljscjzngxe"
+
+[functions.create-task-with-notification]
+verify_jwt = true
