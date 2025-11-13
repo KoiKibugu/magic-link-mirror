@@ -77,27 +77,27 @@ export const TasksView = ({ userDepartment }: TasksViewProps) => {
     e.preventDefault();
     if (!user) return;
 
-    const { error } = await supabase.from("tasks").insert({
-      title,
-      description,
-      priority,
-      status,
-      department_id: selectedDepartment || userDepartment?.id,
-      created_by: user.id,
-      assigned_to: assignee || null,
-      due_date: dueDate || null,
-    });
-
-    if (error) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
+    try {
+      const { data, error } = await supabase.functions.invoke('create-task-with-notification', {
+        body: {
+          title,
+          description,
+          priority,
+          status,
+          department_id: selectedDepartment || userDepartment?.id,
+          created_by: user.id,
+          assigned_to: assignee || null,
+          due_date: dueDate || null,
+        },
       });
-    } else {
+
+      if (error) throw error;
+
       toast({
         title: "Success",
-        description: "Task created successfully",
+        description: assignee 
+          ? "Task created and notification sent to assignee"
+          : "Task created successfully",
       });
       setOpen(false);
       setTitle("");
@@ -108,6 +108,12 @@ export const TasksView = ({ userDepartment }: TasksViewProps) => {
       setAssignee("");
       setDueDate("");
       fetchTasks();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
 
