@@ -16,6 +16,7 @@ interface TaskData {
   created_by: string;
   assigned_to: string | null;
   due_date: string | null;
+  email: string | null;
 }
 
 serve(async (req) => {
@@ -50,7 +51,11 @@ serve(async (req) => {
 
     console.log('Task created successfully:', task);
 
-    // If there's an assignee, create a ticket and send email
+    // Determine email to send to
+    let recipientEmail = taskData.email;
+    let recipientName = 'User';
+
+    // If there's an assignee, create a ticket and get their info
     if (taskData.assigned_to) {
       // Get assignee details
       const { data: assignee, error: assigneeError } = await supabase
@@ -63,6 +68,11 @@ serve(async (req) => {
         console.error('Error fetching assignee:', assigneeError);
       } else {
         console.log('Assignee found:', assignee);
+        // Use assignee email if no custom email provided
+        if (!recipientEmail) {
+          recipientEmail = assignee.email;
+        }
+        recipientName = assignee.full_name || assignee.email;
 
         // Create a ticket for the assignee
         const { error: ticketError } = await supabase
@@ -82,32 +92,34 @@ serve(async (req) => {
         } else {
           console.log('Ticket created successfully');
         }
+      }
+    }
 
-        // Send email notification
-        try {
-          const emailResponse = await resend.emails.send({
-            from: 'Tasks <onboarding@resend.dev>',
-            to: [assignee.email],
-            subject: `New Task Assigned: ${taskData.title}`,
-            html: `
-              <h1>New Task Assignment</h1>
-              <p>Hello ${assignee.full_name},</p>
-              <p>You have been assigned a new task:</p>
-              <h2>${taskData.title}</h2>
-              <p><strong>Description:</strong> ${taskData.description}</p>
-              <p><strong>Priority:</strong> ${taskData.priority}</p>
-              <p><strong>Status:</strong> ${taskData.status}</p>
-              ${taskData.due_date ? `<p><strong>Due Date:</strong> ${new Date(taskData.due_date).toLocaleDateString()}</p>` : ''}
-              <p>Please check your dashboard for more details.</p>
-              <p>Best regards,<br>Task Management System</p>
-            `,
-          });
+    // Send email notification if we have a recipient email
+    if (recipientEmail) {
+      try {
+        const emailResponse = await resend.emails.send({
+          from: 'Tasks <onboarding@resend.dev>',
+          to: [recipientEmail],
+          subject: `New Task Assigned: ${taskData.title}`,
+          html: `
+            <h1>New Task Assignment</h1>
+            <p>Hello ${recipientName},</p>
+            <p>You have been assigned a new task:</p>
+            <h2>${taskData.title}</h2>
+            <p><strong>Description:</strong> ${taskData.description}</p>
+            <p><strong>Priority:</strong> ${taskData.priority}</p>
+            <p><strong>Status:</strong> ${taskData.status}</p>
+            ${taskData.due_date ? `<p><strong>Due Date:</strong> ${new Date(taskData.due_date).toLocaleDateString()}</p>` : ''}
+            <p>Please check your dashboard for more details.</p>
+            <p>Best regards,<br>Task Management System</p>
+          `,
+        });
 
-          console.log('Email sent successfully:', emailResponse);
-        } catch (emailError) {
-          console.error('Error sending email:', emailError);
-          // Don't throw - we still want to return success if task was created
-        }
+        console.log('Email sent successfully:', emailResponse);
+      } catch (emailError) {
+        console.error('Error sending email:', emailError);
+        // Don't throw - we still want to return success if task was created
       }
     }
 
