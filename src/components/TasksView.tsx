@@ -40,6 +40,7 @@ export const TasksView = ({ userDepartment }: TasksViewProps) => {
   const [selectedDepartment, setSelectedDepartment] = useState("");
   const [assignee, setAssignee] = useState("");
   const [dueDate, setDueDate] = useState("");
+  const [email, setEmail] = useState("");
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -88,6 +89,7 @@ export const TasksView = ({ userDepartment }: TasksViewProps) => {
           created_by: user.id,
           assigned_to: assignee || null,
           due_date: dueDate || null,
+          email: email || null,
         },
       });
 
@@ -107,6 +109,7 @@ export const TasksView = ({ userDepartment }: TasksViewProps) => {
       setSelectedDepartment("");
       setAssignee("");
       setDueDate("");
+      setEmail("");
       fetchTasks();
     } catch (error: any) {
       toast({
@@ -230,6 +233,16 @@ export const TasksView = ({ userDepartment }: TasksViewProps) => {
                   type="date"
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="email">Email (Optional)</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="assignee@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
               <Button type="submit" className="w-full">
