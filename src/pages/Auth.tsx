@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { authSchema } from "@/lib/validationSchemas";
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
@@ -30,10 +31,17 @@ export default function Auth() {
     setLoading(true);
 
     try {
+      // Validate input data
+      const validatedData = authSchema.parse({
+        email,
+        password,
+        fullName: isLogin ? undefined : fullName,
+      });
+
       if (isLogin) {
         const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
+          email: validatedData.email,
+          password: validatedData.password,
         });
 
         if (error) throw error;
@@ -45,10 +53,10 @@ export default function Auth() {
         navigate("/dashboard");
       } else {
         const { error } = await supabase.auth.signUp({
-          email,
-          password,
+          email: validatedData.email,
+          password: validatedData.password,
           options: {
-            data: { full_name: fullName },
+            data: { full_name: validatedData.fullName },
             emailRedirectTo: `${window.location.origin}/dashboard`,
           },
         });
@@ -64,7 +72,7 @@ export default function Auth() {
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message,
+        description: error.errors?.[0]?.message || error.message,
         variant: "destructive",
       });
     } finally {

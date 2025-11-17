@@ -23,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { taskSchema } from "@/lib/validationSchemas";
 
 interface TasksViewProps {
   userDepartment: any;
@@ -79,18 +80,21 @@ export const TasksView = ({ userDepartment }: TasksViewProps) => {
     if (!user) return;
 
     try {
+      // Validate input data
+      const validatedData = taskSchema.parse({
+        title,
+        description: description || undefined,
+        email: email || undefined,
+        priority,
+        status,
+        department_id: selectedDepartment || userDepartment?.id,
+        created_by: user.id,
+        assigned_to: assignee || null,
+        due_date: dueDate || null,
+      });
+
       const { data, error } = await supabase.functions.invoke('create-task-with-notification', {
-        body: {
-          title,
-          description,
-          priority,
-          status,
-          department_id: selectedDepartment || userDepartment?.id,
-          created_by: user.id,
-          assigned_to: assignee || null,
-          due_date: dueDate || null,
-          email: email || null,
-        },
+        body: validatedData,
       });
 
       if (error) throw error;
@@ -114,7 +118,7 @@ export const TasksView = ({ userDepartment }: TasksViewProps) => {
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message,
+        description: error.errors?.[0]?.message || error.message,
         variant: "destructive",
       });
     }
