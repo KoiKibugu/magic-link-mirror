@@ -23,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ticketSchema } from "@/lib/validationSchemas";
 
 interface TicketsViewProps {
   userDepartment: any;
@@ -75,33 +76,44 @@ export const TicketsView = ({ userDepartment }: TicketsViewProps) => {
     e.preventDefault();
     if (!user) return;
 
-    const { error } = await supabase.from("tickets").insert({
-      title,
-      description,
-      priority,
-      department_id: selectedDepartment || userDepartment?.id,
-      created_by: user.id,
-      assigned_to: assignedTo || null,
-    } as any);
+    try {
+      // Validate input data
+      const validatedData = ticketSchema.parse({
+        title,
+        description: description || undefined,
+        priority,
+        department_id: selectedDepartment || userDepartment?.id,
+        created_by: user.id,
+        assigned_to: assignedTo || null,
+      });
 
-    if (error) {
+      const { error } = await supabase.from("tickets").insert(validatedData as any);
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "Ticket created successfully",
+        });
+        setOpen(false);
+        setTitle("");
+        setDescription("");
+        setPriority("medium");
+        setSelectedDepartment("");
+        setAssignedTo("");
+        fetchTickets();
+      }
+    } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message,
+        title: "Validation Error",
+        description: error.errors?.[0]?.message || error.message,
         variant: "destructive",
       });
-    } else {
-      toast({
-        title: "Success",
-        description: "Ticket created successfully",
-      });
-      setOpen(false);
-      setTitle("");
-      setDescription("");
-      setPriority("medium");
-      setSelectedDepartment("");
-      setAssignedTo("");
-      fetchTickets();
     }
   };
 
